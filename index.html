@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interface avec Champignon</title>
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: white;
+            color: black;
+            font-family: Arial, sans-serif;
+            transition: background-color 0.5s, color 0.5s;
+        }
+        #container {
+            text-align: center;
+            position: relative;
+        }
+        #person {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 20px auto;
+        }
+        #mushroom {
+            width: 100px;
+            cursor: grab;
+            position: absolute;
+            bottom: -130px; /* Plus bas sur l'écran */
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10; /* Premier plan */
+        }
+        .dark-mode {
+            background-color: black;
+            color: white;
+        }
+        #person img {
+            width: 100%;
+            height: auto;
+            border-radius: 50%;
+        }
+        .hidden {
+            display: none;
+        }
+        #message {
+            transition: opacity 0.5s ease;
+        }
+        .fade-out {
+            opacity: 0;
+        }
+        #noChampi {
+            display: none;
+            font-size: 2em;
+            color: red;
+            font-weight: bold;
+            position:absolute;
+            bottom:250px;
+            left:29%;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <p id="message">Loann à faim. Donne lui un champignon.</p>
+        <div id="person">
+            <img id="personImage" src="tete.jpg" alt="Photo de la personne">
+        </div>
+        <img id="mushroom" src="champi.png" alt="Champignon" draggable="true">
+        <audio id="sadMusic" src="son.mp3"></audio>
+        <p id="noChampi">#NoChampi</p>
+    </div>
+
+    <script>
+        const mushroom = document.getElementById('mushroom');
+        const personImage = document.getElementById('personImage');
+        const sadMusic = document.getElementById('sadMusic');
+        const message = document.getElementById('message');
+        const noChampi = document.getElementById('noChampi');
+
+        mushroom.addEventListener('dragstart', (event) => {
+            event.dataTransfer.setData('text/plain', 'mushroom');
+        });
+
+        personImage.addEventListener('dragover', (event) => {
+            event.preventDefault();
+        });
+
+        personImage.addEventListener('drop', (event) => {
+            event.preventDefault();
+            const data = event.dataTransfer.getData('text/plain');
+            if (data === 'mushroom') {
+                // Changer le fond et le texte
+                document.body.classList.add('dark-mode');
+                // Lancer la musique triste
+                sadMusic.play();
+                // Changer l'image de la personne
+                personImage.src = 'tete2.jpg';
+                // Cacher le champignon
+                mushroom.classList.add('hidden');
+                // Mettre à jour le message
+                message.textContent = "Les champignons sont néfastes pour votre santé";
+                
+                // Faire disparaître le message après 3 secondes et afficher un nouveau
+                setTimeout(() => {
+                    message.classList.add('fade-out'); // Transition de disparition
+                    setTimeout(() => {
+                        message.textContent = "Stoppez votre consommation excessive de champignon";
+                        message.classList.remove('fade-out'); // Réapparaît avec un autre texte
+                        
+                        // Après 5 secondes, afficher #NoChampi
+                        setTimeout(() => {
+                            message.classList.add('fade-out'); // Fait disparaître le message
+                            noChampi.style.display = 'block'; // Affiche #NoChampi en rouge
+                        }, 3000);
+                    }, 500); // Délai pour changer le texte après la transition
+                }, 3000); // Délai de 3 secondes avant de faire disparaître le message
+            }
+        });
+    </script>
+</body>
+</html>
+
