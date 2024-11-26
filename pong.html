@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Cyber Pong</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            font-family: 'Orbitron', sans-serif;
+            overflow: hidden;
+        }
+        #gameContainer {
+            position: relative;
+            perspective: 1000px;
+        }
+        #gameCanvas {
+            background: rgba(32, 58, 67, 0.5);
+            border-radius: 15px;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.4), 
+                        0 0 20px rgba(36, 204, 255, 0.3);
+            transform: rotateX(20deg);
+            border: 2px solid rgba(36, 204, 255, 0.3);
+        }
+        #scoreBoard {
+            position: absolute;
+            top: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #24ccff;
+            font-size: 36px;
+            text-shadow: 0 0 10px rgba(36, 204, 255, 0.7);
+            letter-spacing: 5px;
+        }
+        #startScreen, #pauseScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(15, 32, 39, 0.9);
+            color: #24ccff;
+            z-index: 10;
+            text-align: center;
+        }
+        .btn {
+            padding: 10px 20px;
+            margin: 10px;
+            background: #24ccff;
+            color: #0f2027;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Orbitron', sans-serif;
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            background: #0ff;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="scoreBoard">0 : 0</div>
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
+        <div id="startScreen">
+            <h1>Cyber Pong</h1>
+            <p>Utilisez la souris pour déplacer la raquette droite</p>
+            <p>Touches W/S pour la raquette gauche</p>
+            <button class="btn" onclick="startGame()">Commencer</button>
+        </div>
+        <div id="pauseScreen" style="display:none;">
+            <h1>Jeu en Pause</h1>
+            <button class="btn" onclick="resumeGame()">Reprendre</button>
+            <button class="btn" onclick="resetGame()">Recommencer</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreBoard = document.getElementById('scoreBoard');
+        const startScreen = document.getElementById('startScreen');
+        const pauseScreen = document.getElementById('pauseScreen');
+
+        // Paramètres du jeu
+        const paddleWidth = 15;
+        const paddleHeight = 100;
+        const ballSize = 15;
+        let gameRunning = false;
+        let gamePaused = false;
+
+        // État du jeu
+        const game = {
+            player1: { y: canvas.height / 2 - paddleHeight / 2, score: 0, speed: 0 },
+            player2: { y: canvas.height / 2 - paddleHeight / 2, score: 0, speed: 0 },
+            ball: {
+                x: canvas.width / 2,
+                y: canvas.height / 2,
+                dx: 5,
+                dy: 5,
+                color: '#24ccff'
+            }
+        };
+
+        function drawPaddle(x, y, color = '#24ccff') {
+            ctx.fillStyle = color;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = color;
+            ctx.fillRect(x, y, paddleWidth, paddleHeight);
+        }
+
+        function drawBall() {
+            ctx.beginPath();
+            ctx.fillStyle = game.ball.color;
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = game.ball.color;
+            ctx.arc(game.ball.x, game.ball.y, ballSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function moveBall() {
+            game.ball.x += game.ball.dx;
+            game.ball.y += game.ball.dy;
+
+            // Rebonds verticaux
+            if (game.ball.y <= 0 || game.ball.y >= canvas.height) {
+                game.ball.dy *= -1;
+                // Effet visuel de rebond
+                canvas.style.transform = 'rotateX(22deg) rotateY(5deg)';
+                setTimeout(() => canvas.style.transform = 'rotateX(20deg)', 50);
+            }
+
+            // Collision avec les raquettes
+            if (
+                (game.ball.x <= paddleWidth && 
+                 game.ball.y >= game.player1.y && 
+                 game.ball.y <= game.player1.y + paddleHeight) ||
+                (game.ball.x >= canvas.width - paddleWidth && 
+                 game.ball.y >= game.player2.y && 
+                 game.ball.y <= game.player2.y + paddleHeight)
+            ) {
+                game.ball.dx *= -1.1;  // Accélération à chaque rebond
+            }
+
+            // Marquer un point
+            if (game.ball.x < 0 || game.ball.x > canvas.width) {
+                if (game.ball.x < 0) game.player2.score++;
+                else game.player1.score++;
+                
+                scoreBoard.textContent = `${game.player1.score} : ${game.player2.score}`;
+                resetBall();
+            }
+        }
+
+        function resetBall() {
+            game.ball.x = canvas.width / 2;
+            game.ball.y = canvas.height / 2;
+            game.ball.dx = Math.random() > 0.5 ? 5 : -5;
+            game.ball.dy = Math.random() > 0.5 ? 5 : -5;
+        }
+
+        function gameLoop() {
+            if (!gameRunning || gamePaused) return;
+
+            // Effacer le canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Déplacer les raquettes
+            game.player1.y += game.player1.speed;
+            game.player2.y += game.player2.speed;
+
+            // Dessiner les éléments
+            drawPaddle(0, game.player1.y, '#24ccff');
+            drawPaddle(canvas.width - paddleWidth, game.player2.y, '#ff3366');
+            drawBall();
+
+            // Déplacer la balle
+            moveBall();
+
+            // Intelligence artificielle simple pour la raquette gauche
+            if (game.player1.y + paddleHeight / 2 < game.ball.y) {
+                game.player1.y += 4;
+            } else {
+                game.player1.y -= 4;
+            }
+
+            // Limiter les mouvements des raquettes
+            game.player1.y = Math.max(0, Math.min(canvas.height - paddleHeight, game.player1.y));
+            game.player2.y = Math.max(0, Math.min(canvas.height - paddleHeight, game.player2.y));
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            gameRunning = true;
+            startScreen.style.display = 'none';
+            gameLoop();
+        }
+
+        function pauseGame() {
+            if (gameRunning) {
+                gamePaused = true;
+                pauseScreen.style.display = 'flex';
+            }
+        }
+
+        function resumeGame() {
+            gamePaused = false;
+            pauseScreen.style.display = 'none';
+            gameLoop();
+        }
+
+        function resetGame() {
+            game.player1.score = 0;
+            game.player2.score = 0;
+            scoreBoard.textContent = '0 : 0';
+            resetBall();
+            resumeGame();
+        }
+
+        // Contrôles de la raquette du joueur 2 avec la souris
+        canvas.addEventListener('mousemove', (event) => {
+            if (gameRunning && !gamePaused) {
+                const rect = canvas.getBoundingClientRect();
+                game.player2.y = event.clientY - rect.top - paddleHeight / 2;
+            }
+        });
+
+        // Contrôles clavier pour la raquette gauche
+        document.addEventListener('keydown', (e) => {
+            if (gameRunning && !gamePaused) {
+                switch(e.key) {
+                    case 'w': game.player1.speed = -5; break;
+                    case 's': game.player1.speed = 5; break;
+                    case 'Escape': pauseGame(); break;
+                }
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (gameRunning && !gamePaused) {
+                if (e.key === 'w' || e.key === 's') {
+                    game.player1.speed = 0;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
