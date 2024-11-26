@@ -2,12 +2,194 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>HYPER BREAKOUT ZONE</title>
-    <link rel="stylesheet" href="style/casse-brique.css">
+    <title>HYPER PONG ZONE</title>
+    <style>
+        @keyframes backgroundWarp {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes rainbowBorder {
+            0% { border-color: red; }
+            16% { border-color: orange; }
+            33% { border-color: yellow; }
+            50% { border-color: green; }
+            66% { border-color: blue; }
+            83% { border-color: indigo; }
+            100% { border-color: violet; }
+        }
+
+        @keyframes paddleColorEpilepsy {
+            0% { filter: hue-rotate(0deg); }
+            100% { filter: hue-rotate(360deg); }
+        }
+
+        @keyframes ballTremor {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(-5px, 5px) rotate(15deg); }
+            50% { transform: translate(5px, -5px) rotate(-15deg); }
+            75% { transform: translate(-5px, -5px) rotate(15deg); }
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: linear-gradient(45deg, 
+                rgba(255,0,0,1), 
+                rgba(255,165,0,1), 
+                rgba(255,255,0,1), 
+                rgba(0,255,0,1), 
+                rgba(0,0,255,1), 
+                rgba(75,0,130,1), 
+                rgba(238,130,238,1)
+            );
+            background-size: 1400% 1400%;
+            animation: backgroundWarp 5s ease infinite;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: monospace;
+        }
+
+        #gameCanvas {
+            background: rgba(0,0,0,0.5);
+            border: 10px solid red;
+            border-radius: 20px;
+            box-shadow: 0 0 50px rgba(255,255,255,0.5);
+            animation: 
+                rainbowBorder 2s linear infinite,
+                paddleColorEpilepsy 1s linear infinite alternate;
+        }
+
+        #scoreBoard {
+            position: absolute;
+            top: 20px;
+            font-size: 48px;
+            color: white;
+            text-shadow: 
+                0 0 10px red,
+                0 0 20px blue,
+                0 0 30px green;
+            animation: rainbowBorder 1s linear infinite;
+        }
+    </style>
 </head>
 <body>
-    <div id="scoreBoard">Score: 0</div>
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
-    <script src="script/casse-brique.js"></script>
+    <div id="scoreBoard">0 : 0</div>
+    <canvas id="gameCanvas" width="800" height="500"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreBoard = document.getElementById('scoreBoard');
+
+        const COLORS = [
+            '#FF0000', '#FF7F00', '#FFFF00', 
+            '#00FF00', '#0000FF', '#4B0082', '#9400D3'
+        ];
+
+        let gameState = {
+            player1: { y: 250, score: 0 },
+            player2: { y: 250, score: 0 },
+            ball: {
+                x: 400, 
+                y: 250, 
+                dx: 8, 
+                dy: 8, 
+                color: '#FFFFFF',
+                size: 20
+            }
+        };
+
+        function randomColor() {
+            return COLORS[Math.floor(Math.random() * COLORS.length)];
+        }
+
+        function drawPaddle(x, y) {
+            ctx.fillStyle = randomColor();
+            ctx.fillRect(x, y, 15, 100);
+        }
+
+        function drawBall() {
+            ctx.beginPath();
+            ctx.fillStyle = randomColor();
+            ctx.shadowBlur = 50;
+            ctx.shadowColor = gameState.ball.color;
+            ctx.arc(
+                gameState.ball.x, 
+                gameState.ball.y, 
+                gameState.ball.size, 
+                0, 
+                Math.PI * 2
+            );
+            ctx.fill();
+        }
+
+        function moveBall() {
+            gameState.ball.x += gameState.ball.dx;
+            gameState.ball.y += gameState.ball.dy;
+
+            // Rebonds épileptiques
+            if (gameState.ball.y <= 0 || gameState.ball.y >= 500) {
+                gameState.ball.dy *= -1;
+                gameState.ball.size = Math.random() * 30 + 10;
+                document.body.style.filter = `hue-rotate(${Math.random() * 360}deg)`;
+            }
+
+            // Collision raquettes
+            if (
+                (gameState.ball.x <= 15 && gameState.ball.y >= gameState.player1.y && gameState.ball.y <= gameState.player1.y + 100) ||
+                (gameState.ball.x >= 785 && gameState.ball.y >= gameState.player2.y && gameState.ball.y <= gameState.player2.y + 100)
+            ) {
+                gameState.ball.dx *= -1.2;
+                canvas.style.transform = `scale(${Math.random() * 0.2 + 0.9})`;
+            }
+
+            // Points
+            if (gameState.ball.x < 0 || gameState.ball.x > 800) {
+                if (gameState.ball.x < 0) gameState.player2.score++;
+                else gameState.player1.score++;
+                
+                scoreBoard.textContent = `${gameState.player1.score} : ${gameState.player2.score}`;
+                resetBall();
+            }
+        }
+
+        function resetBall() {
+            gameState.ball.x = 400;
+            gameState.ball.y = 250;
+            gameState.ball.dx = Math.random() > 0.5 ? 8 : -8;
+            gameState.ball.dy = Math.random() > 0.5 ? 8 : -8;
+            gameState.ball.size = 20;
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, 800, 500);
+            
+            // IA Paddles folles
+            gameState.player1.y += Math.sin(Date.now() / 100) * 5;
+            gameState.player2.y += Math.cos(Date.now() / 100) * 5;
+
+            drawPaddle(0, gameState.player1.y);
+            drawPaddle(785, gameState.player2.y);
+            drawBall();
+            moveBall();
+
+            // Limites des raquettes
+            gameState.player1.y = Math.max(0, Math.min(400, gameState.player1.y));
+            gameState.player2.y = Math.max(0, Math.min(400, gameState.player2.y));
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        canvas.addEventListener('mousemove', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            gameState.player2.y = event.clientY - rect.top - 50;
+        });
+
+        gameLoop();
+    </script>
 </body>
 </html>
